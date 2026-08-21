@@ -196,6 +196,79 @@
   table.khtt-table tbody tr:nth-child(even){background:#fafbfa;}
   #viewKHTT{padding:0 0 24px;}
 
+
+  /* ---------- Giỏ hàng / Đặt hàng ---------- */
+  .cart-fab{
+    position:fixed; right:16px; bottom:16px; z-index:60;
+    background:var(--teal-deep); color:#fff; border:none; border-radius:999px;
+    width:56px; height:56px; box-shadow:var(--shadow); font-size:22px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .cart-fab .badge{
+    position:absolute; top:-4px; right:-4px; background:var(--danger); color:#fff;
+    font-size:11px; font-weight:800; border-radius:999px; min-width:20px; height:20px;
+    display:flex; align-items:center; justify-content:center; padding:0 4px;
+  }
+  .cart-fab.hide{display:none;}
+  .add-cart-btn{
+    background:var(--teal-pale); color:var(--teal-deep); border:1px solid var(--teal);
+    font-weight:800; font-size:12.5px; border-radius:10px; padding:7px 10px; cursor:pointer;
+  }
+  .add-cart-btn.added{background:var(--teal-deep); color:#fff;}
+  .cart-overlay{
+    position:fixed; inset:0; background:rgba(10,30,28,.45); z-index:80; display:none;
+    align-items:flex-end; justify-content:center;
+  }
+  .cart-overlay.open{display:flex;}
+  .cart-sheet{
+    background:#fff; width:100%; max-width:520px; max-height:88vh; overflow-y:auto;
+    border-radius:18px 18px 0 0; padding:16px 16px 24px;
+  }
+  .cart-sheet h2{margin:0 0 12px; font-size:17px; color:var(--teal-deep);}
+  .cart-close{float:right; background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-soft);}
+  .cart-item{
+    display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line);
+  }
+  .cart-item .name{flex:1; font-size:13.5px; font-weight:700;}
+  .cart-item .qtybox{display:flex; align-items:center; gap:6px;}
+  .cart-item .qtybox button{
+    width:26px; height:26px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; font-weight:800;
+  }
+  .cart-item .qtybox input.qty-input{
+    width:48px; text-align:center; border:1px solid var(--line); border-radius:8px; padding:4px 2px; font-size:13px; font-weight:700;
+  }
+  .cart-item .qtybox input.qty-input::-webkit-outer-spin-button,
+  .cart-item .qtybox input.qty-input::-webkit-inner-spin-button{ margin-left:2px; }
+  .cart-item .rm{color:var(--danger); background:none; border:none; font-size:12px; cursor:pointer; font-weight:700;}
+  .cart-empty{color:var(--ink-soft); font-size:13px; padding:20px 0; text-align:center;}
+  .order-form{margin-top:14px; display:flex; flex-direction:column; gap:8px;}
+  .order-form input, .order-form select, .order-form textarea{
+    border:1px solid var(--line); border-radius:10px; padding:9px 10px; font-size:13.5px; font-family:inherit;
+  }
+  .order-form textarea{resize:vertical; min-height:50px;}
+  .order-submit{
+    margin-top:6px; background:var(--teal-deep); color:#fff; border:none; border-radius:11px;
+    padding:11px; font-weight:800; font-size:14px; cursor:pointer;
+  }
+  .order-submit:disabled{opacity:.6; cursor:not-allowed;}
+  .order-status{font-size:12.5px; margin-top:8px; text-align:center;}
+  .order-status.ok{color:#1a7a3f;}
+  .order-status.err{color:var(--danger);}
+  .cart-item .promo{font-size:11.5px; color:#1a7a3f; font-weight:700; margin-top:2px;}
+  .cart-item .subtotal{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+  .cart-total-row{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:2px solid var(--line); margin-top:6px; font-weight:800; font-size:14.5px;}
+  .cart-total-row span:last-child{color:var(--teal-deep);}
+  .cust-field{position:relative;}
+  .cust-suggest{
+    position:absolute; left:0; right:0; top:100%; background:#fff; border:1px solid var(--line);
+    border-radius:10px; box-shadow:var(--shadow); z-index:90; max-height:180px; overflow-y:auto; display:none;
+  }
+  .cust-suggest.open{display:block;}
+  .cust-suggest-item{padding:8px 10px; font-size:12.5px; cursor:pointer; border-bottom:1px solid var(--line);}
+  .cust-suggest-item:last-child{border-bottom:none;}
+  .cust-suggest-item:hover{background:var(--teal-pale);}
+  .cust-suggest-item .nm{font-weight:700;}
+  .cust-suggest-item .ph{color:var(--ink-soft);}
 </style>
 </head>
 <body>
@@ -357,13 +430,17 @@ function cardHTML(it, isMed){
 
   let pitchHTML = '';
   let actionsHTML = '';
+  const cartBtn = `<button class="add-cart-btn" onclick='addToCart(${JSON.stringify(String(it.stt))}, ${JSON.stringify(it.name).replace(/'/g,"&#39;")}, ${JSON.stringify(JSON.stringify(it.tiers||[])).replace(/'/g,"&#39;")}, ${JSON.stringify(String(it.price||"0"))}, this)'>🛒 Thêm vào đơn</button>`;
   if (!isMed){
     const pid = 'p'+it.stt;
     pitchHTML = `<div class="pitch-box" id="txt-${pid}">${pitchText(it)}</div>`;
     actionsHTML = `<div class="card-actions">
       <button class="act-btn send" onclick="sendToCustomer('${pid}', this)">📤 Gửi khách hàng</button>
       <button class="act-btn" onclick="copyPitch('${pid}', this)">📋 Sao chép</button>
+      ${cartBtn}
     </div>`;
+  } else {
+    actionsHTML = `<div class="card-actions">${cartBtn}</div>`;
   }
 
   return `<div class="card">
@@ -497,6 +574,273 @@ renderResults();
     installBtn.style.display = 'none';
   });
 })();
+
+</script>
+
+<button class="cart-fab" id="cartFab" onclick="openCart()">🛒<span class="badge" id="cartBadge" style="display:none;">0</span></button>
+
+<div class="cart-overlay" id="cartOverlay" onclick="if(event.target===this) closeCart()">
+  <div class="cart-sheet">
+    <button class="cart-close" onclick="closeCart()">✕</button>
+    <h2>🛒 Đơn hàng của bạn</h2>
+    <div id="cartItems"></div>
+    <div class="cart-total-row"><span>Tổng giá trị đơn hàng</span><span id="cartTotal">0đ</span></div>
+    <div class="order-form" id="orderForm">
+      <div class="cust-field">
+        <input id="ofCustomer" type="text" autocomplete="off" placeholder="Tên khách hàng / phòng khám / nhà thuốc (gõ để tìm khách cũ)" oninput="onCustomerInput()" onfocus="onCustomerInput()" />
+        <div class="cust-suggest" id="custSuggest"></div>
+      </div>
+      <input id="ofPhone" type="tel" inputmode="tel" placeholder="Số điện thoại" />
+      <select id="ofRegion">
+        <option value="">— Khu vực —</option>
+        <option value="Miền Nam">Miền Nam</option>
+        <option value="Miền Bắc">Miền Bắc</option>
+      </select>
+      <input id="ofTDV" type="text" placeholder="Trình dược viên phụ trách (nếu có)" />
+      <textarea id="ofNote" placeholder="Ghi chú thêm (nếu có)"></textarea>
+      <button class="order-submit" id="ofSubmit" onclick="submitOrder()">Gửi đơn hàng</button>
+      <div class="order-status" id="ofStatus"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+/* ---------- Giỏ hàng / Đặt hàng ---------- */
+// Sau khi deploy Apps Script (xem file AppsScript_DatHang.gs), dán Web app URL vào đây:
+const ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbwZjtNCx-v-udFlUua7MqtndwoV3XkeoeZk3Mc0uCduol2f1qeJNdztQ4TeG9aIG1kh5Q/exec";
+
+let cart = {}; // { stt: {name, qty, tiers:[]} }
+let CUSTOMERS = []; // nạp từ Apps Script khi mở giỏ hàng lần đầu
+let customersLoaded = false;
+
+// ---- Tự tính khuyến mãi theo số lượng đặt ----
+// Mốc KM dạng "3 hộp + 1 hộp", "10 hộp +4 hộp"... → lấy 2 số đầu tiên: mua bao nhiêu, tặng bao nhiêu.
+function parseTier(str){
+  const m = String(str).match(/(\d+)[^\d]*\+[^\d]*(\d+)/);
+  if (!m) return null;
+  return { buy: parseInt(m[1],10), free: parseInt(m[2],10), raw: str };
+}
+
+// Áp dụng mốc CAO NHẤT mà số lượng đặt đạt được (không nhân dồn), trả về {buy,free,raw} hoặc null.
+function bestPromo(tiers, qty){
+  if (!tiers || !tiers.length || !qty) return null;
+  const parsed = tiers.map(parseTier).filter(Boolean).sort((a,b)=>a.buy-b.buy);
+  let best = null;
+  parsed.forEach(t=>{ if (qty >= t.buy) best = t; });
+  return best;
+}
+
+function parsePrice(s){
+  const n = parseInt(String(s).replace(/[^\d]/g,''), 10);
+  return isNaN(n) ? 0 : n;
+}
+
+function addToCart(stt, name, tiersJSON, priceStr, btn){
+  let tiers = [];
+  try{ tiers = JSON.parse(tiersJSON) || []; }catch(e){ tiers = []; }
+  if (!cart[stt]) cart[stt] = { name: name, qty: 0, tiers: tiers, price: parsePrice(priceStr) };
+  cart[stt].qty += 1;
+  updateCartUI();
+  if (btn){
+    const old = btn.textContent;
+    btn.textContent = '✓ Đã thêm';
+    btn.classList.add('added');
+    setTimeout(()=>{ btn.textContent = old; btn.classList.remove('added'); }, 1200);
+  }
+}
+
+function changeQty(stt, delta){
+  if (!cart[stt]) return;
+  cart[stt].qty += delta;
+  if (cart[stt].qty <= 0) delete cart[stt];
+  updateCartUI();
+  renderCartItems();
+}
+
+function setQty(stt, value){
+  if (!cart[stt]) return;
+  const n = parseInt(value, 10);
+  if (!n || n <= 0){ delete cart[stt]; }
+  else { cart[stt].qty = n; }
+  updateCartUI();
+  setTimeout(renderCartItems, 0); // tránh xung đột với sự kiện change/blur đang xử lý trên chính ô input
+}
+
+function removeFromCart(stt){
+  delete cart[stt];
+  updateCartUI();
+  renderCartItems();
+}
+
+function cartCount(){
+  return Object.values(cart).reduce((s,it)=>s+it.qty, 0);
+}
+
+function updateCartUI(){
+  const badge = document.getElementById('cartBadge');
+  const n = cartCount();
+  if (n > 0){
+    badge.style.display = 'flex';
+    badge.textContent = n;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderCartItems(){
+  const wrap = document.getElementById('cartItems');
+  const keys = Object.keys(cart);
+  if (!keys.length){
+    wrap.innerHTML = '<div class="cart-empty">Chưa có sản phẩm nào trong đơn. Bấm "🛒 Thêm vào đơn" trên sản phẩm bạn muốn đặt.</div>';
+    return;
+  }
+  wrap.innerHTML = keys.map(stt=>{
+    const it = cart[stt];
+    const promo = bestPromo(it.tiers, it.qty);
+    const promoHTML = promo ? `<div class="promo">🎁 Tặng thêm ${promo.free} (đạt mốc: ${promo.raw})</div>` : '';
+    const subtotal = (it.price||0) * it.qty;
+    return `<div class="cart-item">
+      <div class="name">${it.name}${promoHTML}<div class="subtotal">${subtotal.toLocaleString('vi-VN')}đ</div></div>
+      <div class="qtybox">
+        <button onclick="changeQty('${stt}',-1)">−</button>
+        <input type="number" inputmode="numeric" min="1" class="qty-input" value="${it.qty}"
+               onchange="setQty('${stt}', this.value)" onclick="this.select()">
+        <button onclick="changeQty('${stt}',1)">+</button>
+      </div>
+      <button class="rm" onclick="removeFromCart('${stt}')">Xoá</button>
+    </div>`;
+  }).join('');
+  const grandTotal = keys.reduce((s,stt)=> s + (cart[stt].price||0)*cart[stt].qty, 0);
+  document.getElementById('cartTotal').textContent = grandTotal.toLocaleString('vi-VN') + 'đ';
+}
+
+function openCart(){
+  renderCartItems();
+  document.getElementById('cartOverlay').classList.add('open');
+  loadCustomers();
+}
+function closeCart(){
+  document.getElementById('cartOverlay').classList.remove('open');
+  document.getElementById('custSuggest').classList.remove('open');
+}
+
+// ---- Gợi ý khách hàng (autocomplete), chọn khách cũ hoặc gõ mới ----
+async function loadCustomers(){
+  if (customersLoaded || !ORDER_ENDPOINT) return;
+  customersLoaded = true;
+  try{
+    const res = await fetch(ORDER_ENDPOINT + '?type=customers');
+    const data = await res.json();
+    if (Array.isArray(data)) CUSTOMERS = data;
+  } catch(e){ /* im lặng bỏ qua, khách vẫn gõ tay được */ }
+}
+
+function normCust(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
+}
+
+function onCustomerInput(){
+  const q = normCust(document.getElementById('ofCustomer').value.trim());
+  const box = document.getElementById('custSuggest');
+  if (!q || !CUSTOMERS.length){
+    box.classList.remove('open');
+    box.innerHTML = '';
+    return;
+  }
+  const matches = CUSTOMERS.filter(c=> normCust(c.name).includes(q) || normCust(c.phone).includes(q)).slice(0,8);
+  if (!matches.length){
+    box.classList.remove('open');
+    box.innerHTML = '';
+    return;
+  }
+  box.innerHTML = matches.map((c,i)=>`<div class="cust-suggest-item" onclick="pickCustomer(${i})">
+    <div class="nm">${c.name||'(chưa có tên)'}</div>
+    <div class="ph">${c.phone||''} ${c.region? '· '+c.region : ''}</div>
+  </div>`).join('');
+  box.classList.add('open');
+  window.__custMatches = matches;
+}
+
+function pickCustomer(i){
+  const c = window.__custMatches[i];
+  if (!c) return;
+  document.getElementById('ofCustomer').value = c.name || '';
+  document.getElementById('ofPhone').value = c.phone || '';
+  if (c.region) document.getElementById('ofRegion').value = c.region;
+  document.getElementById('custSuggest').classList.remove('open');
+}
+
+document.addEventListener('click', function(e){
+  const field = document.querySelector('.cust-field');
+  if (field && !field.contains(e.target)){
+    document.getElementById('custSuggest').classList.remove('open');
+  }
+});
+
+async function submitOrder(){
+  const statusEl = document.getElementById('ofStatus');
+  const btn = document.getElementById('ofSubmit');
+  statusEl.textContent = '';
+  statusEl.className = 'order-status';
+
+  if (!cartCount()){
+    statusEl.textContent = 'Đơn hàng đang trống.';
+    statusEl.classList.add('err');
+    return;
+  }
+  const customer = document.getElementById('ofCustomer').value.trim();
+  const phone = document.getElementById('ofPhone').value.trim();
+  const region = document.getElementById('ofRegion').value;
+  const tdv = document.getElementById('ofTDV').value.trim();
+  const note = document.getElementById('ofNote').value.trim();
+
+  if (!customer || !phone || !region){
+    statusEl.textContent = 'Vui lòng nhập tên, số điện thoại và chọn khu vực.';
+    statusEl.classList.add('err');
+    return;
+  }
+  if (!ORDER_ENDPOINT){
+    statusEl.textContent = 'Chưa cấu hình nơi nhận đơn hàng (ORDER_ENDPOINT). Liên hệ quản trị viên.';
+    statusEl.classList.add('err');
+    return;
+  }
+
+  const items = Object.values(cart).map(it=>{
+    const promo = bestPromo(it.tiers, it.qty);
+    return { name: it.name, qty: it.qty, promo: promo ? promo.raw + ' → tặng ' + promo.free : '', subtotal: (it.price||0)*it.qty };
+  });
+  const orderTotal = items.reduce((s,it)=> s + (it.subtotal||0), 0);
+
+  btn.disabled = true;
+  btn.textContent = 'Đang gửi...';
+  try{
+    await fetch(ORDER_ENDPOINT, {
+      method: 'POST',
+      mode: 'no-cors', // Apps Script Web App không hỗ trợ CORS preflight; gửi kiểu "fire-and-forget"
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ customer, phone, region, tdv, note, items, total: orderTotal })
+    });
+    statusEl.textContent = '✓ Đã gửi đơn hàng thành công!';
+    statusEl.classList.add('ok');
+    cart = {};
+    customersLoaded = false; // để lần mở giỏ kế tiếp nạp lại danh sách (có thể vừa thêm khách mới)
+    updateCartUI();
+    renderCartItems();
+    document.getElementById('ofCustomer').value = '';
+    document.getElementById('ofPhone').value = '';
+    document.getElementById('ofRegion').value = '';
+    document.getElementById('ofTDV').value = '';
+    document.getElementById('ofNote').value = '';
+    setTimeout(closeCart, 1500);
+  } catch(err){
+    statusEl.textContent = 'Gửi thất bại, vui lòng thử lại hoặc gọi điện đặt hàng trực tiếp.';
+    statusEl.classList.add('err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Gửi đơn hàng';
+  }
+}
 
 </script>
 </body>
