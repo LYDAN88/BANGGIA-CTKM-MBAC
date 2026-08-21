@@ -210,6 +210,21 @@
     display:flex; align-items:center; justify-content:center; padding:0 4px;
   }
   .cart-fab.hide{display:none;}
+  .tdv-fab{
+    position:fixed; right:16px; bottom:80px; z-index:60;
+    background:#fff; color:var(--teal-deep); border:1px solid var(--teal);
+    width:44px; height:44px; box-shadow:var(--shadow); font-size:18px; border-radius:999px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .tdv-sheet .cust-suggest{position:relative;}
+  .tdv-stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0;}
+  .tdv-stat-box{background:var(--teal-pale); border-radius:12px; padding:10px 12px;}
+  .tdv-stat-box .lbl{font-size:11.5px; color:var(--ink-soft); font-weight:700;}
+  .tdv-stat-box .val{font-size:17px; color:var(--teal-deep); font-weight:800; margin-top:2px;}
+  .tdv-recent{font-size:12.5px; margin-top:10px;}
+  .tdv-recent-item{padding:7px 0; border-top:1px solid var(--line); display:flex; justify-content:space-between; gap:8px;}
+  .tdv-recent-item .c{color:var(--ink-soft);}
+  .tdv-empty{color:var(--ink-soft); font-size:13px; padding:16px 0; text-align:center;}
   .add-cart-btn{
     background:var(--teal-pale); color:var(--teal-deep); border:1px solid var(--teal);
     font-weight:800; font-size:12.5px; border-radius:10px; padding:7px 10px; cursor:pointer;
@@ -577,6 +592,21 @@ renderResults();
 
 </script>
 
+<button class="tdv-fab" id="tdvFab" onclick="openTdvView()" title="Doanh số của tôi">📊</button>
+
+<div class="cart-overlay" id="tdvOverlay" onclick="if(event.target===this) closeTdvView()">
+  <div class="cart-sheet tdv-sheet">
+    <button class="cart-close" onclick="closeTdvView()">✕</button>
+    <h2>📊 Doanh số của tôi</h2>
+    <div class="cust-field">
+      <input id="tdvNameInput" type="text" autocomplete="off" placeholder="Gõ tên Trình dược viên của bạn" oninput="onTdvInput()" onfocus="onTdvInput()" />
+      <div class="cust-suggest" id="tdvSuggest"></div>
+    </div>
+    <button class="order-submit" style="margin-top:8px;" onclick="fetchTdvStats()">Xem doanh số</button>
+    <div id="tdvResult"></div>
+  </div>
+</div>
+
 <button class="cart-fab" id="cartFab" onclick="openCart()">🛒<span class="badge" id="cartBadge" style="display:none;">0</span></button>
 
 <div class="cart-overlay" id="cartOverlay" onclick="if(event.target===this) closeCart()">
@@ -842,6 +872,87 @@ async function submitOrder(){
   }
 }
 
+// ---------- Doanh số của tôi (theo Trình dược viên) ----------
+let TDV_LIST = [];
+let tdvListLoaded = false;
+
+function openTdvView(){
+  document.getElementById('tdvOverlay').classList.add('open');
+  loadTdvList();
+}
+function closeTdvView(){
+  document.getElementById('tdvOverlay').classList.remove('open');
+  document.getElementById('tdvSuggest').classList.remove('open');
+}
+
+async function loadTdvList(){
+  if (tdvListLoaded || !ORDER_ENDPOINT) return;
+  tdvListLoaded = true;
+  try{
+    const res = await fetch(ORDER_ENDPOINT + '?type=tdv_list');
+    const data = await res.json();
+    if (Array.isArray(data)) TDV_LIST = data;
+  } catch(e){ /* im lặng bỏ qua, vẫn gõ tay được */ }
+}
+
+let __tdvMatches = [];
+
+function onTdvInput(){
+  const q = normCust(document.getElementById('tdvNameInput').value);
+  const box = document.getElementById('tdvSuggest');
+  if (!q){ box.classList.remove('open'); box.innerHTML=''; return; }
+  __tdvMatches = TDV_LIST.filter(n => normCust(n).includes(q)).slice(0,8);
+  if (!__tdvMatches.length){ box.classList.remove('open'); box.innerHTML=''; return; }
+  box.innerHTML = __tdvMatches.map((n,i) => `<div class="cust-suggest-item" onclick="pickTdv(${i})">${n}</div>`).join('');
+  box.classList.add('open');
+}
+
+function pickTdv(i){
+  const name = __tdvMatches[i];
+  if (name === undefined) return;
+  document.getElementById('tdvNameInput').value = name;
+  document.getElementById('tdvSuggest').classList.remove('open');
+  fetchTdvStats();
+}
+
+async function fetchTdvStats(){
+  const name = document.getElementById('tdvNameInput').value.trim();
+  const resultEl = document.getElementById('tdvResult');
+  if (!name){
+    resultEl.innerHTML = '<div class="tdv-empty">Nhập tên Trình dược viên để xem doanh số.</div>';
+    return;
+  }
+  if (!ORDER_ENDPOINT){
+    resultEl.innerHTML = '<div class="tdv-empty">Chưa cấu hình nơi nhận đơn hàng (ORDER_ENDPOINT).</div>';
+    return;
+  }
+  resultEl.innerHTML = '<div class="tdv-empty">Đang tải...</div>';
+  try{
+    const res = await fetch(ORDER_ENDPOINT + '?type=tdv_stats&name=' + encodeURIComponent(name));
+    const s = await res.json();
+    if (!s || s.orderCount === undefined){
+      resultEl.innerHTML = '<div class="tdv-empty">Không lấy được dữ liệu, thử lại sau.</div>';
+      return;
+    }
+    if (!s.orderCount){
+      resultEl.innerHTML = '<div class="tdv-empty">Chưa có đơn hàng nào ghi tên "' + name + '".</div>';
+      return;
+    }
+    const recentHTML = (s.recentOrders||[]).map(o =>
+      `<div class="tdv-recent-item"><span>${o.time}</span><span class="c">${o.customer||''}</span><span>${(o.total||0).toLocaleString('vi-VN')}đ</span></div>`
+    ).join('') || '<div class="tdv-empty">Chưa có đơn nào.</div>';
+    resultEl.innerHTML = `
+      <div class="tdv-stat-grid">
+        <div class="tdv-stat-box"><div class="lbl">Tổng doanh số</div><div class="val">${(s.totalRevenue||0).toLocaleString('vi-VN')}đ</div></div>
+        <div class="tdv-stat-box"><div class="lbl">Số đơn hàng</div><div class="val">${s.orderCount||0}</div></div>
+        <div class="tdv-stat-box"><div class="lbl">Doanh số tháng ${s.monthLabel||''}</div><div class="val">${(s.monthRevenue||0).toLocaleString('vi-VN')}đ</div></div>
+      </div>
+      <div class="tdv-recent"><b>Đơn hàng gần đây:</b>${recentHTML}</div>
+    `;
+  } catch(e){
+    resultEl.innerHTML = '<div class="tdv-empty">Lỗi tải dữ liệu, vui lòng thử lại.</div>';
+  }
+}
 </script>
 </body>
 </html>
